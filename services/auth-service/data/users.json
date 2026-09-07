@@ -1,0 +1,56 @@
+[
+  {
+    "id": 1,
+    "username": "ahmedrabie",
+    "email": "ahmedelezmazy36@gmail.com",
+    "password": "$2b$10$Dedw.I7QhkJx348k98bydOLq1VZ.UrKXhqDs36Es0RjHqUodVrf72",
+    "grade": null,
+    "role": "admin",
+    "createdAt": "2026-07-27T16:33:53.382Z"
+  },
+  {
+    "id": 1785170475428,
+    "username": "ahmed",
+    "email": "ahmed@gmail.com",
+    "password": "$2b$10$oQswQti4ih3y2AmNjCD7c.jD6Z5RKngIsPF9KdjdycevODfYhgXbG",
+    "grade": "third",
+    "role": "student",
+    "createdAt": "2026-07-27T16:41:15.428Z"
+  },
+  {
+    "id": 1785175752468,
+    "username": "nesma",
+    "email": "nesma@gmail.com",
+    "password": "$2b$10$C6wtReh8TbuDejuhnir6nuv3zkyns/TqiuktAnjuvOydhGmZcSobW",
+    "grade": "second",
+    "role": "student",
+    "createdAt": "2026-07-27T18:09:12.468Z"
+  },
+  {
+    "id": 1785182916027,
+    "username": "mohamed",
+    "email": "mohamed@gmail.com",
+    "password": "$2b$10$Z3XU1beBxI.YKTBcRAPP4eCzklGlUZGzZip2h7Kw2.TU4XYXdFXcK",
+    "grade": "second",
+    "role": "student",
+    "createdAt": "2026-07-27T20:08:36.027Z"
+  },
+  {
+    "id": 1785183164903,
+    "username": "a",
+    "email": "a@gmail.com",
+    "password": "$2b$10$PSLPP8Dp/jGAC9OvPjL9kev5rchCBP/43d/Lecp62FkSYJGEB/F5S",
+    "grade": "second",
+    "role": "student",
+    "createdAt": "2026-07-27T20:12:44.903Z"
+  },
+  {
+    "id": 1785183425309,
+    "username": "fox",
+    "email": "fox@fox",
+    "password": "$2b$10$4rRV/e/uJH/8/P4Qq3/scu3VGX7g/O5rpMvzMUMlU16jMZ88nH9sW",
+    "grade": "third",
+    "role": "student",
+    "createdAt": "2026-07-27T20:17:05.309Z"
+  }
+]
