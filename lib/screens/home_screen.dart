@@ -477,8 +477,20 @@ class _HomeScreenState extends State<HomeScreen> {
       margin: const EdgeInsets.fromLTRB(12, 6, 12, 10),
       padding: const EdgeInsets.all(14),
       decoration: BoxDecoration(
-        color: card,
+        color: completed
+            ? const Color(0xFF123C2B)
+            : locked
+            ? const Color(0xFF111827)
+            : card,
         borderRadius: BorderRadius.circular(17),
+        border: Border.all(
+          color: completed
+              ? const Color(0xFF22C55E)
+              : locked
+              ? const Color(0xFF334155)
+              : Colors.transparent,
+          width: 1.2,
+        ),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -506,6 +518,9 @@ class _HomeScreenState extends State<HomeScreen> {
             )
           else
             ElevatedButton(
+              style: ElevatedButton.styleFrom(
+                backgroundColor: completed ? const Color(0xFF16A34A) : null,
+              ),
               onPressed: () => openLesson(lesson, allLessons),
               child: Text(completed ? 'مشاهدة الدرس مرة أخرى' : 'فتح الدرس'),
             ),
