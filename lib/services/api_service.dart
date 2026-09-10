@@ -11,20 +11,16 @@ class ApiService {
 
   static const FlutterSecureStorage _storage = FlutterSecureStorage();
 
-  // Try both gateway shapes so the app works with either gateway version.
   static const List<String> _studentBases = [
     '/api/students',
-    '/api/students/students',
   ];
 
   static const List<String> _contentBases = [
     '/api/content',
-    '/api/content/content',
   ];
 
   static const List<String> _progressBases = [
     '/api/progress',
-    '/api/progress/progress',
   ];
 
   Future<Map<String, String>> _headers() async {
