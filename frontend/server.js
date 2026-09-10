@@ -125,7 +125,7 @@ async function getStudentAccess(
   userId
 ) {
   return axios.get(
-    `${GATEWAY}/api/students/students/${userId}/access`
+    `${GATEWAY}/api/students/${userId}/access`
   );
 }
 
@@ -139,15 +139,15 @@ async function loadStudentState(
     progressResponse,
   ] = await Promise.all([
     axios.get(
-      `${GATEWAY}/api/students/students/${user.userId}`
+      `${GATEWAY}/api/students/${user.userId}`
     ),
 
     axios.get(
-      `${GATEWAY}/api/content/content/${user.grade}`
+      `${GATEWAY}/api/content/${user.grade}`
     ),
 
     axios.get(
-      `${GATEWAY}/api/progress/progress/${user.userId}`
+      `${GATEWAY}/api/progress/${user.userId}`
     ),
   ]);
 
@@ -646,7 +646,7 @@ app.post(
 
 
       await axios.post(
-        `${GATEWAY}/api/students/students`,
+        `${GATEWAY}/api/students`,
         form,
         {
           headers:
@@ -951,7 +951,7 @@ app.get(
       ) {
 
         await axios.post(
-          `${GATEWAY}/api/progress/progress/check-access`,
+          `${GATEWAY}/api/progress/check-access`,
           {
             userId:
               req.session.user
@@ -1043,7 +1043,7 @@ app.post(
 
       const response =
         await axios.get(
-          `${GATEWAY}/api/content/content/${grade}/lessons/${lessonId}`
+          `${GATEWAY}/api/content/${grade}/lessons/${lessonId}`
         );
 
 
@@ -1163,7 +1163,7 @@ app.post(
 
       const response =
         await axios.get(
-          `${GATEWAY}/api/content/content/${grade}/lessons/${lessonId}`
+          `${GATEWAY}/api/content/${grade}/lessons/${lessonId}`
         );
 
 
@@ -1172,7 +1172,7 @@ app.post(
 
 
       await axios.post(
-        `${GATEWAY}/api/progress/progress/complete`,
+        `${GATEWAY}/api/progress/complete`,
         {
           userId:
             req.session.user
@@ -1252,7 +1252,7 @@ app.post(
 
 
       await axios.post(
-        `${GATEWAY}/api/progress/progress/video-view`,
+        `${GATEWAY}/api/progress/video-view`,
         {
           userId:
             req.session.user
@@ -1322,15 +1322,15 @@ app.get(
       ] = await Promise.all([
 
         axios.get(
-          `${GATEWAY}/api/students/students`
+          `${GATEWAY}/api/students`
         ),
 
         axios.get(
-          `${GATEWAY}/api/content/content`
+          `${GATEWAY}/api/content`
         ),
 
         axios.get(
-          `${GATEWAY}/api/progress/progress/admin/video-views`
+          `${GATEWAY}/api/progress/admin/video-views`
         ),
 
       ]);
@@ -1498,7 +1498,7 @@ app.post(
     try {
 
       await axios.delete(
-        `${GATEWAY}/api/students/students/${req.params.userId}`
+        `${GATEWAY}/api/students/${req.params.userId}`
       );
 
 
@@ -1537,7 +1537,7 @@ app.post(
     try {
 
       await axios.post(
-        `${GATEWAY}/api/students/students/${req.params.userId}/approve`
+        `${GATEWAY}/api/students/${req.params.userId}/approve`
       );
 
 
@@ -1576,7 +1576,7 @@ app.post(
     try {
 
       await axios.post(
-        `${GATEWAY}/api/students/students/${req.params.userId}/reject`
+        `${GATEWAY}/api/students/${req.params.userId}/reject`
       );
 
 
@@ -1615,7 +1615,7 @@ app.post(
     try {
 
       await axios.post(
-        `${GATEWAY}/api/students/students/${req.params.userId}/renew`
+        `${GATEWAY}/api/students/${req.params.userId}/renew`
       );
 
 
@@ -1659,7 +1659,7 @@ app.get(
 
       const response =
         await axios.get(
-          `${GATEWAY}/api/content/content`
+          `${GATEWAY}/api/content`
         );
 
 
@@ -1709,7 +1709,7 @@ app.post(
     try {
 
       await axios.post(
-        `${GATEWAY}/api/content/content/${req.body.grade}/chapters`,
+        `${GATEWAY}/api/content/${req.body.grade}/chapters`,
         {
           title:
             req.body.title,
@@ -1752,7 +1752,7 @@ app.post(
     try {
 
       await axios.put(
-        `${GATEWAY}/api/content/content/${req.params.grade}/chapters/${req.params.chapterId}`,
+        `${GATEWAY}/api/content/${req.params.grade}/chapters/${req.params.chapterId}`,
         {
           title:
             req.body.title,
@@ -1795,7 +1795,7 @@ app.post(
     try {
 
       await axios.delete(
-        `${GATEWAY}/api/content/content/${req.params.grade}/chapters/${req.params.chapterId}`
+        `${GATEWAY}/api/content/${req.params.grade}/chapters/${req.params.chapterId}`
       );
 
 
@@ -1847,7 +1847,7 @@ app.post(
 
 
       await axios.post(
-        `${GATEWAY}/api/content/content/${grade}/chapters/${chapterId}/lessons`,
+        `${GATEWAY}/api/content/${grade}/chapters/${chapterId}/lessons`,
         {
           title,
           description,
@@ -1891,7 +1891,7 @@ app.post(
     try {
 
       await axios.put(
-        `${GATEWAY}/api/content/content/${req.params.grade}/lessons/${req.params.lessonId}`,
+        `${GATEWAY}/api/content/${req.params.grade}/lessons/${req.params.lessonId}`,
         {
           title:
             req.body.title,
@@ -1940,7 +1940,7 @@ app.post(
     try {
 
       await axios.delete(
-        `${GATEWAY}/api/content/content/${req.params.grade}/lessons/${req.params.lessonId}`
+        `${GATEWAY}/api/content/${req.params.grade}/lessons/${req.params.lessonId}`
       );
 
 
@@ -1992,7 +1992,7 @@ app.post(
 
 
       await axios.post(
-        `${GATEWAY}/api/content/content/${grade}/lessons/${lessonId}/topics`,
+        `${GATEWAY}/api/content/${grade}/lessons/${lessonId}/topics`,
         {
           title,
           description,
@@ -2036,7 +2036,7 @@ app.post(
     try {
 
       await axios.put(
-        `${GATEWAY}/api/content/content/${req.params.grade}/lessons/${req.params.lessonId}/topics/${req.params.topicId}`,
+        `${GATEWAY}/api/content/${req.params.grade}/lessons/${req.params.lessonId}/topics/${req.params.topicId}`,
         {
           title:
             req.body.title,
@@ -2092,7 +2092,7 @@ app.post(
     try {
 
       await axios.delete(
-        `${GATEWAY}/api/content/content/${req.params.grade}/lessons/${req.params.lessonId}/topics/${req.params.topicId}`
+        `${GATEWAY}/api/content/${req.params.grade}/lessons/${req.params.lessonId}/topics/${req.params.topicId}`
       );
 
 
@@ -2143,7 +2143,7 @@ app.post(
 
 
       await axios.post(
-        `${GATEWAY}/api/content/content/${grade}/lessons/${lessonId}/exercises`,
+        `${GATEWAY}/api/content/${grade}/lessons/${lessonId}/exercises`,
         {
           question,
           correctAnswer,
@@ -2186,7 +2186,7 @@ app.post(
     try {
 
       await axios.put(
-        `${GATEWAY}/api/content/content/${req.params.grade}/lessons/${req.params.lessonId}/exercises/${req.params.exerciseId}`,
+        `${GATEWAY}/api/content/${req.params.grade}/lessons/${req.params.lessonId}/exercises/${req.params.exerciseId}`,
         {
           question:
             req.body.question,
@@ -2232,7 +2232,7 @@ app.post(
     try {
 
       await axios.delete(
-        `${GATEWAY}/api/content/content/${req.params.grade}/lessons/${req.params.lessonId}/exercises/${req.params.exerciseId}`
+        `${GATEWAY}/api/content/${req.params.grade}/lessons/${req.params.lessonId}/exercises/${req.params.exerciseId}`
       );
 
 
