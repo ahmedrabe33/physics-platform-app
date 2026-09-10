@@ -42,8 +42,33 @@ class _LoginScreenState extends State<LoginScreen> {
       );
 
       final user = Map<String, dynamic>.from(result['user'] ?? {});
+      final role = user['role']?.toString();
 
       if (!mounted) return;
+
+      if (role == 'admin') {
+        await auth.logout();
+
+        if (!mounted) return;
+
+        setState(() {
+          error = 'حساب الإدارة متاح من لوحة التحكم على الويب فقط';
+        });
+
+        return;
+      }
+
+      if (role != 'student') {
+        await auth.logout();
+
+        if (!mounted) return;
+
+        setState(() {
+          error = 'نوع الحساب غير مدعوم في تطبيق الموبايل';
+        });
+
+        return;
+      }
 
       Navigator.of(context).pushReplacement(
         MaterialPageRoute(builder: (_) => HomeScreen(user: user)),
