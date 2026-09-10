@@ -1,0 +1,53 @@
+name: Flutter CI
+
+on:
+  push:
+    branches:
+      - flutter
+  pull_request:
+    branches:
+      - flutter
+
+permissions:
+  contents: read
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Java
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: "17"
+
+      - name: Setup Flutter
+        uses: subosito/flutter-action@v2
+        with:
+          flutter-version: "3.47.2"
+          channel: stable
+          cache: true
+
+      - name: Flutter Pub Get
+        run: flutter pub get
+
+      - name: Flutter Analyze
+        run: flutter analyze
+
+      - name: Flutter Test
+        run: flutter test
+
+      - name: Build APK
+        run: |
+          flutter build apk --release \
+            --dart-define=API_BASE_URL=http://54.174.133.163:8080
+
+      - name: Upload APK
+        uses: actions/upload-artifact@v4
+        with:
+          name: physics-platform-apk
+          path: build/app/outputs/flutter-apk/app-release.apk
