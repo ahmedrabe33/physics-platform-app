@@ -256,6 +256,9 @@ services:
       progress-service:
         condition: service_healthy
 
+    ports:
+      - "8080:8080"
+
     networks:
       - frontend-net
       - backend
