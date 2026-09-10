@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:url_launcher/url_launcher.dart';
 
 import '../services/auth_service.dart';
+import 'admin_screen.dart';
 import 'home_screen.dart';
 import 'signup_screen.dart';
 import 'status_screen.dart';
@@ -47,14 +48,9 @@ class _LoginScreenState extends State<LoginScreen> {
       if (!mounted) return;
 
       if (role == 'admin') {
-        await auth.logout();
-
-        if (!mounted) return;
-
-        setState(() {
-          error = 'حساب الإدارة متاح من لوحة التحكم على الويب فقط';
-        });
-
+        Navigator.of(context).pushReplacement(
+          MaterialPageRoute(builder: (_) => AdminScreen(user: user)),
+        );
         return;
       }
 
@@ -64,7 +60,7 @@ class _LoginScreenState extends State<LoginScreen> {
         if (!mounted) return;
 
         setState(() {
-          error = 'نوع الحساب غير مدعوم في تطبيق الموبايل';
+          error = 'نوع الحساب غير مدعوم';
         });
 
         return;
