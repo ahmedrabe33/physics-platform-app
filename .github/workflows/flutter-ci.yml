@@ -41,7 +41,7 @@ jobs:
       - name: Build APK
         run: |
           flutter build apk --release \
-            --dart-define=API_BASE_URL=http://54.174.133.163:8080
+            --dart-define=API_BASE_URL=http://54.174.133.163:8081
 
       - name: Upload APK Artifact
         uses: actions/upload-artifact@v4
