@@ -1,18 +1,15 @@
-name: Flutter CI
+name: Flutter CI/CD
 
 on:
   push:
     branches:
       - flutter
-  pull_request:
-    branches:
-      - flutter
 
 permissions:
-  contents: read
+  contents: write
 
 jobs:
-  build:
+  build-release:
     runs-on: ubuntu-latest
 
     steps:
@@ -32,13 +29,13 @@ jobs:
           channel: stable
           cache: true
 
-      - name: Flutter Pub Get
+      - name: Install Dependencies
         run: flutter pub get
 
-      - name: Flutter Analyze
+      - name: Analyze
         run: flutter analyze
 
-      - name: Flutter Test
+      - name: Test
         run: flutter test
 
       - name: Build APK
@@ -46,8 +43,19 @@ jobs:
           flutter build apk --release \
             --dart-define=API_BASE_URL=http://54.174.133.163:8080
 
-      - name: Upload APK
+      - name: Upload APK Artifact
         uses: actions/upload-artifact@v4
         with:
           name: physics-platform-apk
           path: build/app/outputs/flutter-apk/app-release.apk
+
+      - name: Create GitHub Release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          TAG="flutter-v1.0.${{ github.run_number }}"
+
+          gh release create "$TAG" \
+            build/app/outputs/flutter-apk/app-release.apk \
+            --title "Physics Platform $TAG" \
+            --notes "Automated Flutter Android release."
