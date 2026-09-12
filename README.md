@@ -1,164 +1,269 @@
-aa# ⚛️ Physics Learning Platform
+⚛️ Physics Learning Platform
 
-A cloud-native physics learning platform built using a **microservices architecture** and designed as a practical DevOps project for learning and demonstrating:
+A production-oriented, cloud-native learning platform for Egyptian secondary-school physics, built with Node.js microservices, a web frontend, a Flutter mobile app, PostgreSQL, Docker, Kubernetes, Jenkins, GitHub Actions, Trivy, SonarQube, Amazon ECR, and GitOps with Argo CD.
 
-- Docker
-- Docker Compose
-- Kubernetes
-- PostgreSQL
-- NGINX Ingress
-- Persistent Storage
-- ConfigMaps & Secrets
-- Health Probes
-- Rolling Updates
-- Resource Management
-- Horizontal Scaling
-- Microservices Communication
+📌 Overview
 
-The application provides a complete learning workflow for Egyptian secondary school students, including registration, subscription approval, educational content, exercises, and lesson progress tracking.
+The Physics Learning Platform is designed as both a real educational product and a hands-on DevOps project. It has two user-facing clients:
 
----
+Web Frontend — browser-based interface.
 
-## 📌 Project Overview
+Flutter Mobile App — Android/mobile client.
 
-The platform allows students to:
+Both clients consume the same backend through the API Gateway, which routes requests to independent microservices.
 
-- Create an account
-- Select their educational grade
-- Upload payment proof
-- Wait for admin approval
-- Access educational content after activation
-- Browse chapters and lessons
-- Solve exercises
-- Track lesson progress
-- Unlock lessons sequentially
-- Renew expired subscriptions
+✨ Main Features
 
-Administrators can:
+Students
 
-- Review student registrations
-- Approve or reject students
-- Renew subscriptions
-- Add chapters
-- Add lessons
-- Add exercises
-- Manage educational content
+Create an account
 
----
+Select an educational grade
 
-# 🏗️ Architecture
+Upload payment proof
 
-```text
-                        Browser
-                           │
-                           │
-                    physics.local
-                           │
-                           ▼
-                 ┌───────────────────┐
-                 │   NGINX Ingress   │
-                 └─────────┬─────────┘
-                           │
-                           ▼
-                 ┌───────────────────┐
-                 │ Frontend Service  │
-                 │      :3000        │
-                 └─────────┬─────────┘
-                           │
-                           ▼
-                 ┌───────────────────┐
-                 │    API Gateway    │
-                 │      :8080        │
-                 └─────────┬─────────┘
-                           │
-          ┌────────────────┼────────────────┐
-          │                │                │
-          ▼                ▼                ▼
- ┌────────────────┐ ┌────────────────┐ ┌────────────────┐
- │  Auth Service  │ │Student Service │ │Content Service │
- │     :3001      │ │     :3002      │ │     :3003      │
- └───────┬────────┘ └───────┬────────┘ └───────┬────────┘
-         │                  │                  │
-         │                  │                  │
-         └──────────────┬───┴───────────┐      │
-                        │               │      │
-                        ▼               ▼      ▼
-                ┌───────────────────────────────┐
-                │          PostgreSQL           │
-                │             :5432             │
-                └───────────────────────────────┘
+Wait for administrator approval
 
-                           ▲
-                           │
-                 ┌─────────┴──────────┐
-                 │ Progress Service  │
-                 │      :3004        │
-                 └────────────────────┘
-```
+Access educational content after activation
 
----
+Browse chapters and lessons
 
-# 🧩 Microservices
+Solve exercises
 
-| Service | Port | Responsibility |
-|---|---:|---|
-| Frontend | 3000 | Web UI and user sessions |
-| API Gateway | 8080 | Routes API requests to backend services |
-| Auth Service | 3001 | Authentication and user management |
-| Student Service | 3002 | Student profiles, subscriptions and payments |
-| Content Service | 3003 | Chapters, lessons and exercises |
-| Progress Service | 3004 | Student lesson progress and unlocking |
-| PostgreSQL | 5432 | Persistent relational database |
+Track lesson progress
 
----
+Unlock lessons sequentially
 
-# 🛠️ Technology Stack
+Renew expired subscriptions
 
-### Application
+Administrators
 
-- Node.js
-- Express.js
-- EJS
-- Axios
-- Multer
-- PostgreSQL
+Review registrations
 
-### Containers
+Approve or reject students
 
-- Docker
-- Docker Compose
-- Multi-stage Docker builds
-- Alpine-based Node.js images
-- Non-root containers
+Renew subscriptions
 
-### Kubernetes
+Add chapters
 
-- Deployments
-- StatefulSets
-- Services
-- NGINX Ingress
-- ConfigMaps
-- Secrets
-- PersistentVolumeClaims
-- StorageClasses
-- Init Containers
-- Startup Probes
-- Readiness Probes
-- Liveness Probes
-- Resource Requests & Limits
-- Rolling Updates
-- Multiple Replicas
+Add lessons
 
-### Local Kubernetes Environment
+Add exercises
 
-- Minikube
-- Multi-node Kubernetes cluster
+Manage educational content
 
----
+🏗️ Platform Architecture
 
-# 📂 Project Structure
+flowchart TD
+    USER[Users]
 
-```text
+    USER --> WEB[Web Frontend<br/>Browser / EJS]
+    USER --> MOBILE[Flutter Mobile App<br/>Android]
+
+    WEB --> ALB[Public Entry Point / ALB]
+    MOBILE --> ALB
+
+    ALB -->|/| FE[Frontend Service<br/>:3000]
+    ALB -->|/api/*| GW[API Gateway<br/>:8080]
+
+    FE --> GW
+
+    GW --> AUTH[Auth Service<br/>:3001]
+    GW --> STUDENT[Student Service<br/>:3002]
+    GW --> CONTENT[Content Service<br/>:3003]
+    GW --> PROGRESS[Progress Service<br/>:3004]
+
+    AUTH --> DB[(PostgreSQL<br/>:5432)]
+    STUDENT --> DB
+    CONTENT --> DB
+    PROGRESS --> DB
+
+    STUDENT --> UPLOADS[(Persistent Upload Storage)]
+
+Request Flow
+
+Browser
+   │
+   ├── /        → Web Frontend
+   │
+   └── /api/*   → API Gateway
+                     │
+                     ├── Auth Service
+                     ├── Student Service
+                     ├── Content Service
+                     └── Progress Service
+
+Flutter Mobile App
+   │
+   └── /api/*   → API Gateway
+                     │
+                     ├── Auth Service
+                     ├── Student Service
+                     ├── Content Service
+                     └── Progress Service
+
+The browser and Flutter app share the same backend API and business logic.
+
+🧩 Microservices
+
+Component
+
+Port
+
+Responsibility
+
+Web Frontend
+
+3000
+
+Browser UI and web sessions
+
+API Gateway
+
+8080
+
+Routes API traffic to backend services
+
+Auth Service
+
+3001
+
+Authentication and user management
+
+Student Service
+
+3002
+
+Student profiles, subscriptions, and payments
+
+Content Service
+
+3003
+
+Chapters, lessons, and exercises
+
+Progress Service
+
+3004
+
+Student progress and lesson unlocking
+
+PostgreSQL
+
+5432
+
+Persistent relational database
+
+Flutter App
+
+—
+
+Native mobile client consuming /api/*
+
+🛠️ Technology Stack
+
+Application
+
+Node.js
+
+Express.js
+
+EJS
+
+Axios
+
+Multer
+
+PostgreSQL
+
+Flutter
+
+Dart
+
+Containers
+
+Docker
+
+Docker Compose
+
+Multi-stage builds
+
+Alpine-based images
+
+Non-root containers
+
+.dockerignore
+
+Kubernetes
+
+Deployments
+
+StatefulSets
+
+Services
+
+Ingress
+
+ConfigMaps
+
+Secrets
+
+PersistentVolumeClaims
+
+StorageClasses
+
+Init Containers
+
+Startup Probes
+
+Readiness Probes
+
+Liveness Probes
+
+Resource Requests & Limits
+
+Rolling Updates
+
+CI/CD & Security
+
+Jenkins
+
+GitHub Actions
+
+SonarQube
+
+Trivy
+
+Amazon ECR
+
+Argo CD
+
+GitOps
+
+AWS CLI
+
+Infrastructure
+
+AWS
+
+Amazon EKS
+
+EC2
+
+ECR
+
+EBS
+
+Application Load Balancer
+
+IAM
+
+Terraform
+
+Ansible
+
+📂 Application Repository Structure
+
 physics-platform/
 │
 ├── frontend/
@@ -174,30 +279,25 @@ physics-platform/
 │   └── server.js
 │
 ├── services/
-│   │
 │   ├── auth-service/
 │   │   ├── Dockerfile
 │   │   ├── package.json
 │   │   └── server.js
-│   │
 │   ├── student-service/
 │   │   ├── Dockerfile
 │   │   ├── package.json
 │   │   ├── server.js
 │   │   └── uploads/
-│   │
 │   ├── content-service/
 │   │   ├── Dockerfile
 │   │   ├── package.json
 │   │   └── server.js
-│   │
 │   └── progress-service/
 │       ├── Dockerfile
 │       ├── package.json
 │       └── server.js
 │
 ├── k8s/
-│   │
 │   ├── auth/
 │   ├── student/
 │   ├── content/
@@ -209,123 +309,71 @@ physics-platform/
 │   └── ingress/
 │
 ├── docker-compose.yml
-├── .gitignore
+├── Jenkinsfile
 ├── health.sh
 ├── start-all.sh
 ├── stop-all.sh
 └── README.md
-```
 
----
+The Flutter client is part of the same platform but follows its own mobile CI/CD lifecycle through GitHub Actions.
 
-# 🐳 Docker Architecture
+🔁 Application Flow
 
-Each microservice has its own Docker image.
+flowchart TD
+    A[Student Signup] --> B[Upload Payment Proof]
+    B --> C[Pending Approval]
+    C --> D[Admin Review]
+    D -->|Reject| E[Rejected]
+    D -->|Approve| F[Subscription Active]
+    F --> G[Grade]
+    G --> H[Chapter]
+    H --> I[Lesson]
+    I --> J[Exercises]
+    J --> K[Complete Lesson]
+    K --> L[Unlock Next Lesson]
 
-The Dockerfiles follow security best practices including:
+🐳 Docker
 
-- Lightweight Alpine base images
-- Production-only dependencies
-- Multi-stage builds
-- Non-root application user
-- Limited container privileges
-- Health checks
-- `.dockerignore` usage
+Each backend service and the web frontend has its own Docker image.
 
-Example architecture:
+The Dockerfiles follow practices such as:
 
-```text
-Source Code
-    │
-    ▼
-Dockerfile
-    │
-    ▼
-Docker Image
-    │
-    ▼
-Container
-```
+Lightweight base images
 
----
+Production-only dependencies
 
-# 🐳 Run with Docker Compose
+Multi-stage builds where appropriate
 
-Build and start the platform:
+Non-root users
 
-```bash
+Reduced Linux capabilities
+
+Health checks
+
+.dockerignore
+
+Docker Compose
+
 docker compose up -d --build
-```
 
-Check containers:
-
-```bash
 docker compose ps
-```
 
-View logs:
-
-```bash
 docker compose logs -f
-```
 
-Stop the platform:
-
-```bash
 docker compose down
-```
 
-The frontend is available at:
+Web frontend:
 
-```text
 http://localhost:3000
-```
 
----
+☸️ Kubernetes
 
-# ☸️ Kubernetes Deployment
+The application can run locally on Kubernetes or in AWS EKS.
 
-The Kubernetes version of the project runs on a multi-node Minikube cluster.
+Configuration
 
-Example:
+Non-sensitive configuration is stored in ConfigMaps.
 
-```bash
-minikube start \
-  --driver=docker \
-  --nodes=3
-```
-
-Check nodes:
-
-```bash
-kubectl get nodes
-```
-
----
-
-# 📦 Kubernetes Namespace
-
-The application uses a dedicated namespace:
-
-```bash
-kubectl create namespace physics
-```
-
-Check it:
-
-```bash
-kubectl get namespace physics
-```
-
----
-
-# ⚙️ Configuration Management
-
-Application configuration is stored in a Kubernetes `ConfigMap`.
-
-Example:
-
-```yaml
 apiVersion: v1
 kind: ConfigMap
 metadata:
@@ -334,29 +382,18 @@ metadata:
 
 data:
   NODE_ENV: production
-
   DB_HOST: postgres
   DB_PORT: "5432"
-
   AUTH_SERVICE: http://auth-service:3001
   STUDENT_SERVICE: http://student-service:3002
   CONTENT_SERVICE: http://content-service:3003
   PROGRESS_SERVICE: http://progress-service:3004
-
   GATEWAY_URL: http://gateway:8080
-```
 
----
+Secrets
 
-# 🔐 Secrets Management
+Sensitive values are supplied through Kubernetes Secrets.
 
-Sensitive values are stored in Kubernetes Secrets.
-
-The real secret file is intentionally excluded from Git.
-
-Example template:
-
-```yaml
 apiVersion: v1
 kind: Secret
 metadata:
@@ -369,22 +406,13 @@ stringData:
   POSTGRES_USER: physics_user
   POSTGRES_PASSWORD: CHANGE_ME
   POSTGRES_DB: physics_db
-
   JWT_SECRET: CHANGE_ME
   SESSION_SECRET: CHANGE_ME
-```
 
-Create your local Secret before deployment.
+Never commit real production credentials to a public repository.
 
-> Never commit production credentials or secrets to Git.
+PostgreSQL & Persistent Storage
 
----
-
-# 🗄️ PostgreSQL
-
-PostgreSQL runs as a Kubernetes `StatefulSet`.
-
-```text
 PostgreSQL StatefulSet
         │
         ▼
@@ -395,37 +423,9 @@ PersistentVolume
         │
         ▼
 StorageClass
-```
 
-This ensures database data survives Pod recreation.
+Student payment screenshots are also stored on persistent storage:
 
-Check PostgreSQL:
-
-```bash
-kubectl get statefulset -n physics
-```
-
-Check storage:
-
-```bash
-kubectl get pvc -n physics
-```
-
----
-
-# 💾 Persistent Storage
-
-Persistent storage is used for:
-
-### PostgreSQL
-
-Database files are stored in a PersistentVolume.
-
-### Student Payment Uploads
-
-Payment screenshots are stored separately using a PVC.
-
-```text
 Student Pod
     │
     ▼
@@ -433,583 +433,789 @@ Student Pod
     │
     ▼
 PersistentVolumeClaim
-```
 
-An Init Container configures the volume permissions before the application container starts.
+Stateless vs Stateful
 
----
+Stateless workloads:
 
-# 🧠 Stateless vs Stateful Services
+Auth Service
+Content Service
+Progress Service
+Gateway
+Web Frontend
 
-The backend architecture was redesigned so application data is stored in PostgreSQL instead of local JSON files.
+Stateful workloads:
 
-Therefore:
+PostgreSQL
+Student upload storage
 
-```text
-Auth Service      → Stateless
-Content Service   → Stateless
-Progress Service  → Stateless
-Gateway           → Stateless
-```
+Rolling Updates
 
-These services can safely run multiple replicas.
-
-PostgreSQL remains stateful.
-
-The Student Service currently uses persistent storage for uploaded payment screenshots.
-
----
-
-# 🔄 Rolling Updates
-
-Deployments use Kubernetes RollingUpdate strategy.
-
-Example:
-
-```yaml
 strategy:
   type: RollingUpdate
-
   rollingUpdate:
     maxUnavailable: 0
     maxSurge: 1
-```
 
-This enables application updates without intentionally taking all replicas offline.
+Health Probes
 
-Update an image:
+Services expose health endpoints such as:
 
-```bash
-kubectl set image deployment/auth-service \
-  auth-service=physics-auth:v2 \
-  -n physics
-```
-
-Monitor:
-
-```bash
-kubectl rollout status deployment/auth-service -n physics
-```
-
----
-
-# ❤️ Health Checks
-
-Services expose:
-
-```text
 /health
-```
 
-Three Kubernetes probes are used.
+Kubernetes uses startup, readiness, and liveness probes.
 
-### Startup Probe
+Resource Management
 
-Determines whether the application successfully started.
-
-### Readiness Probe
-
-Determines whether the Pod can receive traffic.
-
-### Liveness Probe
-
-Detects unhealthy applications and allows Kubernetes to restart them.
-
-Example:
-
-```yaml
-readinessProbe:
-  httpGet:
-    path: /health
-    port: 3003
-
-  periodSeconds: 5
-```
-
----
-
-# 📊 Resource Management
-
-Pods use CPU and memory requests and limits.
-
-Example:
-
-```yaml
 resources:
-
   requests:
     cpu: "50m"
     memory: "64Mi"
-
   limits:
     cpu: "250m"
     memory: "256Mi"
-```
 
-This helps Kubernetes schedule Pods efficiently and prevents individual containers from consuming unlimited resources.
+Container Security
 
----
-
-# 🔒 Container Security
-
-Application containers run as non-root users.
-
-Example:
-
-```yaml
 securityContext:
-
   runAsNonRoot: true
   runAsUser: 100
   runAsGroup: 101
-
   allowPrivilegeEscalation: false
-
   capabilities:
     drop:
       - ALL
-```
 
-This reduces the attack surface of the containers.
+Networking
 
----
-
-# 🌐 Kubernetes Networking
-
-Backend services use `ClusterIP`.
-
-```text
 Frontend
-    ↓
+   ↓
 Gateway
+   ├── auth-service
+   ├── student-service
+   ├── content-service
+   └── progress-service
 
-Gateway
-    ├── auth-service
-    ├── student-service
-    ├── content-service
-    └── progress-service
-```
+Internal DNS examples:
 
-Kubernetes internal DNS allows services to communicate using names such as:
-
-```text
 http://auth-service:3001
 http://student-service:3002
 http://content-service:3003
 http://progress-service:3004
 http://postgres:5432
-```
 
-No backend microservice needs direct external exposure.
+No backend microservice requires direct public exposure.
 
----
+☁️ Production Deployment Model
 
-# 🚪 NGINX Ingress
+flowchart TD
+    INTERNET[Internet Users] --> ALB[AWS Application Load Balancer]
+    ALB -->|/| WEB[Web Frontend Service]
+    ALB -->|/api/*| GATEWAY[API Gateway Service]
+    MOBILE[Flutter Mobile App] -->|HTTPS /api/*| ALB
+    GATEWAY --> AUTH[Auth]
+    GATEWAY --> STUDENT[Student]
+    GATEWAY --> CONTENT[Content]
+    GATEWAY --> PROGRESS[Progress]
+    AUTH --> PG[(PostgreSQL)]
+    STUDENT --> PG
+    CONTENT --> PG
+    PROGRESS --> PG
 
-External traffic enters through NGINX Ingress.
+Production responsibilities are separated:
 
-Example hostname:
+Terraform provisions AWS infrastructure.
 
-```text
-physics.local
-```
+Ansible configures servers such as Jenkins.
 
-Architecture:
+Jenkins handles web/backend CI/CD.
 
-```text
-Browser
-   ↓
-NGINX Ingress
-   ↓
-Frontend ClusterIP Service
-   ↓
-Frontend Pod
-```
+GitHub Actions handles Flutter CI/CD.
 
-Example Ingress:
+Argo CD deploys Kubernetes workloads from GitOps state.
 
-```yaml
-apiVersion: networking.k8s.io/v1
+🚀 CI/CD Overview
 
-kind: Ingress
+There are two independent pipelines.
 
-metadata:
-  name: physics-ingress
-  namespace: physics
+flowchart LR
+    subgraph Web_Backend[Web + Backend Pipeline]
+        G1[GitHub] --> J[Jenkins]
+        J --> TEST[Tests]
+        TEST --> SONAR[SonarQube]
+        SONAR --> TRIVY[Trivy]
+        TRIVY --> DOCKER[Docker Build]
+        DOCKER --> ECR[Amazon ECR]
+        ECR --> GITOPS[GitOps Repo]
+        GITOPS --> ARGO[Argo CD]
+        ARGO --> EKS[EKS]
+    end
 
-spec:
+    subgraph Mobile[Flutter Mobile Pipeline]
+        G2[GitHub] --> GHA[GitHub Actions]
+        GHA --> ANALYZE[flutter analyze]
+        ANALYZE --> FTEST[flutter test]
+        FTEST --> BUILD[Build APK/AAB]
+        BUILD --> SIGN[Signing]
+        SIGN --> ARTIFACT[Artifacts / Release]
+    end
 
-  ingressClassName: nginx
+🟦 Web & Backend CI/CD — Jenkins
 
-  rules:
+The Jenkins Declarative Pipeline builds, tests, scans, publishes, and promotes all six web/backend components.
 
-    - host: physics.local
+Jenkins agent label:
 
-      http:
+linux
 
-        paths:
+Pipeline behavior includes:
 
-          - path: /
-            pathType: Prefix
+timestamps()
 
-            backend:
+disableConcurrentBuilds()
 
-              service:
+skipDefaultCheckout(true)
 
-                name: frontend
+Optional failure on HIGH/CRITICAL security findings
 
-                port:
-                  number: 3000
-```
+Security gate parameter:
 
----
+FAIL_ON_SECURITY_ISSUES
 
-# 🌍 Accessing the Application
+Jenkins Pipeline Stages
 
-Get the Minikube IP:
+#
 
-```bash
-minikube ip
-```
+Stage
 
-Add it to:
+Purpose
 
-```text
-/etc/hosts
-```
+1
 
-Example:
+Checkout
 
-```text
-192.168.49.2 physics.local
-```
+Pull application source
 
-Then open:
+2
 
-```text
-http://physics.local
-```
+Prepare
 
----
+Build and validate the service matrix
 
-# 🧪 Useful Kubernetes Commands
+3
 
-Check all resources:
+Install Dependencies
 
-```bash
-kubectl get all -n physics
-```
+npm ci or npm install
 
-Check Pods:
+4
 
-```bash
-kubectl get pods -n physics
-```
+Unit Tests
 
-Check Services:
+npm test --if-present
 
-```bash
-kubectl get svc -n physics
-```
+5
 
-Check Ingress:
+Check SonarQube
 
-```bash
-kubectl get ingress -n physics
-```
+Verify SonarQube availability
 
-Check PVCs:
+6
 
-```bash
-kubectl get pvc -n physics
-```
+SonarQube Analysis
 
-View logs:
+Static analysis + Quality Gate
 
-```bash
-kubectl logs <pod-name> -n physics
-```
+7
 
-Follow logs:
+Trivy Filesystem Scan
 
-```bash
-kubectl logs -f <pod-name> -n physics
-```
+Vulnerability, secret, and misconfiguration scan
 
-Describe a Pod:
+8
 
-```bash
+Docker Build All
+
+Build all service images
+
+9
+
+Trivy Image Scan
+
+Scan built images
+
+10
+
+AWS Identity
+
+Verify Jenkins AWS identity
+
+11
+
+ECR Login
+
+Authenticate Docker to ECR
+
+12
+
+Push All to ECR
+
+Publish images
+
+13
+
+Update GitOps
+
+Update Kustomize image tags
+
+14
+
+Post Actions
+
+Cleanup and success/failure reporting
+
+Jenkins Service Matrix
+
+Service
+
+Source Path
+
+Kustomize Image
+
+auth-service
+
+services/auth-service
+
+physics-auth
+
+student-service
+
+services/student-service
+
+physics-student
+
+content-service
+
+services/content-service
+
+physics-content
+
+progress-service
+
+services/progress-service
+
+physics-progress
+
+gateway
+
+gateway
+
+physics-gateway
+
+frontend
+
+frontend
+
+physics-frontend
+
+SonarQube
+
+Each service is scanned independently.
+
+physics-platform-<service>
+
+sonar-scanner \
+  -Dsonar.projectKey=physics-platform-${service} \
+  -Dsonar.projectName=physics-platform-${service} \
+  -Dsonar.sources=. \
+  -Dsonar.exclusions=node_modules/**,coverage/**,dist/**,build/** \
+  -Dsonar.qualitygate.wait=true \
+  -Dsonar.qualitygate.timeout=300
+
+Trivy
+
+Filesystem scan:
+
+trivy fs \
+  --scanners vuln,secret,misconfig \
+  --severity HIGH,CRITICAL \
+  --skip-dirs node_modules \
+  <service-path>
+
+Image scan:
+
+trivy image \
+  --severity HIGH,CRITICAL \
+  --ignore-unfixed \
+  <image>
+
+Docker Image Strategy
+
+Current Jenkinsfile tagging:
+
+<service>-<BUILD_NUMBER>
+<service>-latest
+
+For production, immutable Git SHA tags are preferred:
+
+<service>-<GIT_SHA>
+
+Amazon ECR
+
+aws sts get-caller-identity
+
+aws ecr get-login-password \
+  --region "${AWS_REGION}" \
+| docker login \
+  --username AWS \
+  --password-stdin \
+  "${ECR_REGISTRY}"
+
+GitOps Deployment
+
+GitOps repository:
+
+https://github.com/ahmedrabe33/physics-platform-gitops.git
+
+Branch:
+
+main
+
+Kustomize deployment file:
+
+k8s/overlays/eks/kustomization.yaml
+
+Jenkins
+   │
+   ├── Test
+   ├── SonarQube
+   ├── Trivy
+   ├── Docker Build
+   └── Push to ECR
+           │
+           ▼
+      GitOps Update
+           │
+           ▼
+        Argo CD
+           │
+           ▼
+          EKS
+
+Jenkins does not need to deploy directly with kubectl; it updates GitOps state and Argo CD reconciles the cluster.
+
+Jenkins Credentials
+
+Credentials ID
+
+Type
+
+Purpose
+
+sonarqube-token
+
+Secret text
+
+SonarQube authentication
+
+github-token
+
+Secret text / GitHub credential
+
+Push GitOps updates
+
+AWS authentication should come from the Jenkins EC2 IAM role instead of static AWS access keys.
+
+📱 Flutter Mobile CI/CD — GitHub Actions
+
+The Flutter application has its own pipeline independent from Jenkins.
+
+It uses a GitHub-hosted runner, so no dedicated mobile EC2 runner is required.
+
+runs-on: ubuntu-latest
+
+Flutter Pipeline Architecture
+
+flowchart TD
+    PUSH[Push / Pull Request] --> CHECKOUT[Checkout]
+    CHECKOUT --> FLUTTER[Setup Flutter]
+    FLUTTER --> DEPS[flutter pub get]
+    DEPS --> FORMAT[Format Check]
+    FORMAT --> ANALYZE[flutter analyze]
+    ANALYZE --> TEST[flutter test]
+    TEST --> BUILD[Release Build]
+    BUILD --> SIGN[Android Signing]
+    SIGN --> AAB[AAB / APK]
+    AAB --> ARTIFACT[GitHub Artifact]
+    ARTIFACT --> RELEASE[Release / Store Promotion]
+
+Recommended Mobile CI Stages
+
+#
+
+Stage
+
+Purpose
+
+1
+
+Checkout
+
+Checkout source
+
+2
+
+Setup Java
+
+Install the required JDK
+
+3
+
+Setup Flutter
+
+Pin Flutter version
+
+4
+
+Dependencies
+
+flutter pub get
+
+5
+
+Formatting
+
+dart format --output=none --set-exit-if-changed .
+
+6
+
+Static Analysis
+
+flutter analyze
+
+7
+
+Tests
+
+flutter test
+
+8
+
+Build
+
+Build release APK/AAB
+
+9
+
+Signing
+
+Restore keystore from GitHub Secrets
+
+10
+
+Artifact
+
+Upload signed artifact
+
+11
+
+Release
+
+Optional GitHub Release / Play Store promotion
+
+Quality gates:
+
+flutter pub get
+
+dart format \
+  --output=none \
+  --set-exit-if-changed .
+
+flutter analyze
+flutter test
+
+Release build:
+
+flutter build appbundle --release
+
+Optional APK:
+
+flutter build apk --release
+
+Mobile Secrets
+
+Keep signing material in GitHub Actions Secrets:
+
+ANDROID_KEYSTORE_BASE64
+ANDROID_KEY_ALIAS
+ANDROID_KEY_PASSWORD
+ANDROID_STORE_PASSWORD
+
+Never commit the production keystore to Git.
+
+Mobile Release Strategy
+
+Feature Branch
+     │
+     ▼
+Pull Request
+     │
+     ├── Format
+     ├── Analyze
+     └── Test
+     │
+     ▼
+Main
+     │
+     ├── Full CI
+     └── Release Build
+     │
+     ▼
+Signed AAB
+     │
+     ▼
+Internal / Staging Testing
+     │
+     ▼
+Manual Approval
+     │
+     ▼
+Production
+
+🔐 CI/CD Security Model
+
+Jenkins EC2
+   │
+   ├── IAM Role → AWS / ECR permissions
+   ├── Jenkins Credentials → GitHub / SonarQube
+   └── No direct application secrets in Jenkinsfile
+
+GitHub Actions
+   │
+   ├── GitHub Secrets → Mobile signing material
+   └── Ephemeral GitHub-hosted runner
+
+Argo CD
+   │
+   └── GitOps repository → Kubernetes desired state
+
+Recommended principles:
+
+Least-privilege IAM
+
+No AWS keys hardcoded in Jenkins
+
+No mobile signing credentials committed to Git
+
+Immutable production image tags
+
+Security scans before image promotion
+
+SonarQube Quality Gate before deployment
+
+GitOps as the Kubernetes deployment path
+
+Manual approval before production mobile release
+
+🔄 Complete Delivery Architecture
+
+flowchart TB
+    DEV[Developer]
+
+    DEV --> APPREPO[Application Repository]
+
+    APPREPO -->|Web / Backend| JENKINS[Jenkins]
+    JENKINS --> SONAR[SonarQube]
+    JENKINS --> TRIVY[Trivy]
+    JENKINS --> ECR[Amazon ECR]
+    JENKINS --> GITOPS[GitOps Repository]
+
+    GITOPS --> ARGO[Argo CD]
+    ARGO --> EKS[Amazon EKS]
+
+    APPREPO -->|Flutter| GHA[GitHub Actions]
+    GHA --> GH_RUNNER[GitHub-hosted Runner]
+    GH_RUNNER --> MOBILE_ARTIFACT[Signed APK / AAB]
+
+    EKS --> ALB[Application Load Balancer]
+
+    USERS[Users] -->|Web| ALB
+    USERS -->|Mobile| MOBILE[Flutter App]
+    MOBILE -->|API| ALB
+
+🐞 Troubleshooting Practiced
+
+Image Pull Problems
+
+Typical causes:
+
+Image missing
+
+Wrong image tag
+
+Wrong imagePullPolicy
+
 kubectl describe pod <pod-name> -n physics
-```
 
----
+CrashLoopBackOff
 
-# 🐞 Troubleshooting Scenarios Practiced
+kubectl logs <pod-name> -n physics
+kubectl logs --previous <pod-name> -n physics
+kubectl describe pod <pod-name> -n physics
 
-This project was also used to practice real Kubernetes troubleshooting.
-
-Issues encountered included:
-
-### `ErrImageNeverPull`
-
-Cause:
-
-```text
-Container image was not available on the node.
-```
-
-Resolution:
-
-- Build/load the image on Minikube nodes
-- Verify image tags
-- Verify `imagePullPolicy`
-
----
-
-### `CrashLoopBackOff`
-
-Used:
-
-```bash
-kubectl logs
-kubectl logs --previous
-kubectl describe pod
-```
-
-to identify application startup failures.
-
----
-
-### PVC Permission Errors
+PVC Permission Errors
 
 Example:
 
-```text
 EACCES: permission denied
-```
 
-The application container ran as a non-root user while the mounted volume had root ownership.
+Solution: use an Init Container to configure volume ownership for a non-root application container.
 
-Solved using an Init Container to configure volume ownership.
+CreateContainerConfigError
 
----
+Usually caused by a missing ConfigMap, Secret, or referenced key.
 
-### `CreateContainerConfigError`
+kubectl describe pod <pod-name> -n physics
 
-Caused by missing ConfigMap or Secret keys.
-
-Diagnosed using:
-
-```bash
-kubectl describe pod
-```
-
-and fixed by correcting ConfigMap and Secret configuration.
-
----
-
-### Readiness / Startup Probe Failures
+Probe Failures
 
 Example:
 
-```text
 connection refused
-```
 
-Used container logs and probe configuration to determine whether the application was actually listening on its expected port.
+Check application port, health path, logs, startup time, and probe configuration.
 
----
-
-### Kubernetes API Server Timeout
+Kubernetes API Timeout
 
 Example:
 
-```text
 net/http: TLS handshake timeout
-```
 
-Diagnosed as local Minikube resource pressure and control-plane availability issues.
+In local environments this can be caused by Minikube resource pressure or control-plane availability issues.
 
----
+📈 Scalability
 
-# 🔁 Application Flow
+Stateless components can run multiple replicas:
 
-```text
-Student Signup
-      │
-      ▼
-Upload Payment Proof
-      │
-      ▼
-Pending Approval
-      │
-      ▼
-Admin Review
-      │
-      ├── Reject
-      │
-      └── Approve
-             │
-             ▼
-       Subscription Active
-             │
-             ▼
-          Grade
-             │
-             ▼
-          Chapter
-             │
-             ▼
-           Lesson
-             │
-             ▼
-         Exercises
-             │
-             ▼
-      Complete Lesson
-             │
-             ▼
-      Unlock Next Lesson
-```
-
----
-
-# 📈 Scalability
-
-Several stateless services run multiple replicas.
-
-Example:
-
-```text
 Auth Service       ×2
 Content Service    ×2
 Progress Service   ×2
 Gateway            ×2
-```
+Frontend           ×2
 
-Kubernetes Services distribute traffic between available Pods.
+Production scaling options include:
 
-Future versions will introduce HPA for automatic scaling.
+Horizontal Pod Autoscaler
 
----
+Karpenter / cluster autoscaling
 
-# 🚧 Current Development Notes
+External object storage for uploads
 
-This project is currently used as both:
+Redis-backed sessions
 
-- A working educational platform prototype
-- A hands-on DevOps/Kubernetes learning environment
+PostgreSQL HA or managed database migration
 
-Some development-oriented components are intentionally simple.
+🛣️ DevOps Roadmap
 
-Current improvements planned include:
+Application                    ✅
+Docker                         ✅
+Docker Compose                 ✅
+PostgreSQL                     ✅
+Kubernetes                     ✅
+Persistent Storage             ✅
+ConfigMaps / Secrets           ✅
+Health Probes                  ✅
+Rolling Updates                ✅
+Jenkins Pipeline               ✅
+SonarQube                      ✅
+Trivy                          ✅
+GitOps / Argo CD               ✅
+Flutter Client                 ✅
+GitHub Actions for Flutter     ◉
+Terraform Infrastructure       ◉
+Ansible Configuration          ◉
+Prometheus / Grafana           ⏳
+Centralized Logging            ⏳
+HTTPS / Domain                 ⏳
+Object Storage for Uploads     ⏳
+Production Hardening           ⏳
 
-- Redis-backed sessions
-- Horizontal Pod Autoscaling
-- Monitoring with Prometheus and Grafana
-- Centralized logs
-- Helm packaging
-- CI/CD pipeline
-- Automated image builds
-- Container security scanning
-- GitOps deployment
-- Cloud deployment
-- HTTPS/TLS
-- Object Storage for payment screenshots
+Legend:
 
----
+✅ Implemented / practiced
+◉ In active development
+⏳ Planned
 
-# 🔮 DevOps Roadmap
+🧪 Useful Kubernetes Commands
 
-```text
-Application
-    ✅
+kubectl get all -n physics
+kubectl get pods -n physics
+kubectl get svc -n physics
+kubectl get ingress -n physics
+kubectl get pvc -n physics
+kubectl logs <pod-name> -n physics
+kubectl logs -f <pod-name> -n physics
+kubectl describe pod <pod-name> -n physics
 
-Docker
-    ✅
+🎯 Project Goals
 
-Docker Compose
-    ✅
+The project demonstrates practical knowledge of:
 
-PostgreSQL
-    ✅
+Microservices architecture
 
-Kubernetes
-    ✅
+Containerization
 
-Persistent Storage
-    ✅
+Kubernetes orchestration
 
-ConfigMap / Secret
-    ✅
+Service discovery
 
-Ingress
-    ✅
+Persistent storage
 
-Health Probes
-    ✅
+Stateful vs stateless workloads
 
-Rolling Updates
-    ✅
+Container security
 
-        ↓
+Application configuration
 
-HPA
-        ↓
-Prometheus
-        ↓
-Grafana
-        ↓
-Helm
-        ↓
-GitHub Actions / Jenkins
-        ↓
-Trivy
-        ↓
-SonarQube
-        ↓
-GitOps / Argo CD
-        ↓
-Cloud Deployment
-```
+Kubernetes troubleshooting
 
----
+CI/CD
 
-# 🎯 Project Goals
+Static code analysis
 
-The main goal of this project is to demonstrate practical knowledge of:
+Security scanning
 
-- Containerization
-- Microservices
-- Kubernetes orchestration
-- Service discovery
-- Persistent storage
-- Stateful vs stateless workloads
-- Container security
-- Application configuration
-- Kubernetes troubleshooting
-- High availability
-- Scaling
-- Deployment strategies
+Cloud container registries
 
----
+GitOps deployment
 
-# 👨‍💻 Author
+Mobile CI/CD
 
-**Ahmed Rabie**
+Infrastructure as Code
 
+Configuration management
+
+Scaling and deployment strategies
+
+🔗 Repositories
+
+Application repository:
+
+https://github.com/ahmedrabe33/physics-platform-app
+
+GitOps repository:
+
+https://github.com/ahmedrabe33/physics-platform-gitops
+
+👨‍💻 Author
+
+Ahmed Rabie
 DevOps / Cloud Engineer
 
 GitHub:
 
-```text
 https://github.com/ahmedrabe33
-```
 
----
-
-## ⭐ Support
+⭐ Support
 
 If you find this project useful, consider giving the repository a star ⭐.
-# big-physics-platform
-# physics-platform-app
