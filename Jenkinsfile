@@ -10,19 +10,6 @@ pipeline {
     }
 
     parameters {
-        choice(
-            name: 'SERVICE',
-            choices: [
-                'auth-service',
-                'student-service',
-                'content-service',
-                'progress-service',
-                'gateway',
-                'frontend'
-            ],
-            description: 'Service to build and deploy'
-        )
-
         booleanParam(
             name: 'FAIL_ON_SECURITY_ISSUES',
             defaultValue: false,
@@ -35,10 +22,11 @@ pipeline {
         AWS_ACCOUNT_ID = '112859066474'
         ECR_REPO       = 'platform-app'
 
-        SONAR_URL      = 'http://18.223.49.150:9000'
+        SONAR_URL = 'http://18.223.49.150:9000'
 
-        GITOPS_BRANCH  = 'main'
-        GITOPS_FILE    = 'k8s/overlays/eks/kustomization.yaml'
+        GITOPS_REPO   = 'https://github.com/ahmedrabe33/physics-platform-gitops.git'
+        GITOPS_BRANCH = 'main'
+        GITOPS_FILE   = 'k8s/overlays/eks/kustomization.yaml'
     }
 
     stages {
@@ -51,94 +39,51 @@ pipeline {
 
         stage('Prepare') {
             steps {
-                script {
-                    env.SERVICE = params.SERVICE?.trim()
-
-                    if (!env.SERVICE) {
-                        env.SERVICE = 'auth-service'
-                    }
-
-                    switch (env.SERVICE) {
-
-                        case 'auth-service':
-                            env.SERVICE_PATH = 'services/auth-service'
-                            env.KUSTOMIZE_IMAGE = 'physics-auth'
-                            break
-
-                        case 'student-service':
-                            env.SERVICE_PATH = 'services/student-service'
-                            env.KUSTOMIZE_IMAGE = 'physics-student'
-                            break
-
-                        case 'content-service':
-                            env.SERVICE_PATH = 'services/content-service'
-                            env.KUSTOMIZE_IMAGE = 'physics-content'
-                            break
-
-                        case 'progress-service':
-                            env.SERVICE_PATH = 'services/progress-service'
-                            env.KUSTOMIZE_IMAGE = 'physics-progress'
-                            break
-
-                        case 'gateway':
-                            env.SERVICE_PATH = 'gateway'
-                            env.KUSTOMIZE_IMAGE = 'physics-gateway'
-                            break
-
-                        case 'frontend':
-                            env.SERVICE_PATH = 'frontend'
-                            env.KUSTOMIZE_IMAGE = 'physics-frontend'
-                            break
-
-                        default:
-                            error("Unsupported service: ${env.SERVICE}")
-                    }
-
-                    env.IMAGE_TAG =
-                        "${env.SERVICE}-${env.BUILD_NUMBER}"
-
-                    env.ECR_REGISTRY =
-                        "${env.AWS_ACCOUNT_ID}.dkr.ecr.${env.AWS_REGION}.amazonaws.com"
-
-                    env.IMAGE =
-                        "${env.ECR_REGISTRY}/${env.ECR_REPO}:${env.IMAGE_TAG}"
-
-                    env.LATEST_IMAGE =
-                        "${env.ECR_REGISTRY}/${env.ECR_REPO}:${env.SERVICE}-latest"
-                }
-
                 sh '''
-                    echo "======================================"
-                    echo "BUILD INFORMATION"
-                    echo "======================================"
-
-                    echo "Agent:           $(hostname)"
-                    echo "Service:         ${SERVICE}"
-                    echo "Service Path:    ${SERVICE_PATH}"
-                    echo "Kustomize Image: ${KUSTOMIZE_IMAGE}"
-                    echo "Build:           ${BUILD_NUMBER}"
-                    echo "Image Tag:       ${IMAGE_TAG}"
-                    echo "Image:           ${IMAGE}"
+                    cat > .ci-services <<'SERVICES'
+auth-service|services/auth-service|physics-auth
+student-service|services/student-service|physics-student
+content-service|services/content-service|physics-content
+progress-service|services/progress-service|physics-progress
+gateway|gateway|physics-gateway
+frontend|frontend|physics-frontend
+SERVICES
 
                     echo "======================================"
-                    echo "VALIDATING SERVICE"
+                    echo "PLATFORM BUILD"
+                    echo "======================================"
+                    echo "Agent: $(hostname)"
+                    echo "Build: ${BUILD_NUMBER}"
+                    echo
+                    echo "Services:"
+                    cat .ci-services
                     echo "======================================"
 
-                    test -d "${SERVICE_PATH}"
-                    test -f "${SERVICE_PATH}/Dockerfile"
+                    while IFS='|' read -r service path kustomize
+                    do
+                        echo "Validating ${service}"
 
-                    echo "Service validation successful"
+                        test -d "${path}"
+                        test -f "${path}/Dockerfile"
+
+                        echo "${service} OK"
+                    done < .ci-services
                 '''
             }
         }
 
         stage('Install Dependencies') {
             steps {
-                dir("${env.SERVICE_PATH}") {
-                    sh '''
-                        if [ -f package.json ]; then
+                sh '''
+                    while IFS='|' read -r service path kustomize
+                    do
+                        echo "======================================"
+                        echo "DEPENDENCIES: ${service}"
+                        echo "======================================"
 
-                            echo "Installing dependencies for ${SERVICE}"
+                        if [ -f "${path}/package.json" ]; then
+
+                            cd "${WORKSPACE}/${path}"
 
                             if [ -f package-lock.json ]; then
                                 npm ci
@@ -146,28 +91,42 @@ pipeline {
                                 npm install
                             fi
 
+                            cd "${WORKSPACE}"
+
                         else
-                            echo "No package.json found"
+                            echo "No package.json"
                             echo "Skipping npm dependencies"
                         fi
-                    '''
-                }
+
+                    done < .ci-services
+                '''
             }
         }
 
         stage('Unit Tests') {
             steps {
-                dir("${env.SERVICE_PATH}") {
-                    sh '''
-                        if [ -f package.json ]; then
-                            echo "Running tests for ${SERVICE}"
+                sh '''
+                    while IFS='|' read -r service path kustomize
+                    do
+                        echo "======================================"
+                        echo "TESTS: ${service}"
+                        echo "======================================"
+
+                        if [ -f "${path}/package.json" ]; then
+
+                            cd "${WORKSPACE}/${path}"
+
                             npm test --if-present
+
+                            cd "${WORKSPACE}"
+
                         else
-                            echo "No package.json found"
+                            echo "No package.json"
                             echo "Skipping unit tests"
                         fi
-                    '''
-                }
+
+                    done < .ci-services
+                '''
             }
         }
 
@@ -185,7 +144,7 @@ pipeline {
                       "${SONAR_URL}/api/system/status"
 
                     echo
-                    echo "SonarQube is reachable"
+                    echo "SonarQube is UP"
                 '''
             }
         }
@@ -198,59 +157,78 @@ pipeline {
                         variable: 'SONAR_TOKEN'
                     )
                 ]) {
-                    dir("${env.SERVICE_PATH}") {
-                        sh '''
-                            echo "Running SonarQube analysis for ${SERVICE}"
+                    sh '''
+                        while IFS='|' read -r service path kustomize
+                        do
+                            echo "======================================"
+                            echo "SONARQUBE: ${service}"
+                            echo "======================================"
+
+                            cd "${WORKSPACE}/${path}"
 
                             sonar-scanner \
-                              -Dsonar.projectKey=physics-platform-${SERVICE} \
-                              -Dsonar.projectName=physics-platform-${SERVICE} \
+                              -Dsonar.projectKey=physics-platform-${service} \
+                              -Dsonar.projectName=physics-platform-${service} \
                               -Dsonar.sources=. \
                               -Dsonar.exclusions=node_modules/**,coverage/**,dist/**,build/** \
                               -Dsonar.host.url=${SONAR_URL} \
                               -Dsonar.token=${SONAR_TOKEN} \
                               -Dsonar.qualitygate.wait=true \
                               -Dsonar.qualitygate.timeout=300
-                        '''
-                    }
+
+                            cd "${WORKSPACE}"
+
+                        done < .ci-services
+                    '''
                 }
             }
         }
 
         stage('Trivy Filesystem Scan') {
             steps {
-                dir("${env.SERVICE_PATH}") {
-                    sh '''
-                        EXIT_CODE=0
+                sh '''
+                    EXIT_CODE=0
 
-                        if [ "${FAIL_ON_SECURITY_ISSUES}" = "true" ]; then
-                            EXIT_CODE=1
-                        fi
+                    if [ "${FAIL_ON_SECURITY_ISSUES}" = "true" ]; then
+                        EXIT_CODE=1
+                    fi
+
+                    while IFS='|' read -r service path kustomize
+                    do
+                        echo "======================================"
+                        echo "TRIVY FILESYSTEM: ${service}"
+                        echo "======================================"
 
                         trivy fs \
                           --scanners vuln,secret,misconfig \
                           --severity HIGH,CRITICAL \
                           --skip-dirs node_modules \
                           --exit-code ${EXIT_CODE} \
-                          .
-                    '''
-                }
+                          "${path}"
+
+                    done < .ci-services
+                '''
             }
         }
 
-        stage('Docker Build') {
+        stage('Docker Build All') {
             steps {
-                dir("${env.SERVICE_PATH}") {
-                    sh '''
+                sh '''
+                    while IFS='|' read -r service path kustomize
+                    do
+                        IMAGE="${AWS_ACCOUNT_ID}.dkr.ecr.${AWS_REGION}.amazonaws.com/${ECR_REPO}:${service}-${BUILD_NUMBER}"
+
                         echo "======================================"
-                        echo "BUILDING DOCKER IMAGE"
+                        echo "BUILDING ${service}"
+                        echo "${IMAGE}"
                         echo "======================================"
 
                         docker build \
                           -t "${IMAGE}" \
-                          .
-                    '''
-                }
+                          "${path}"
+
+                    done < .ci-services
+                '''
             }
         }
 
@@ -263,11 +241,21 @@ pipeline {
                         EXIT_CODE=1
                     fi
 
-                    trivy image \
-                      --severity HIGH,CRITICAL \
-                      --ignore-unfixed \
-                      --exit-code ${EXIT_CODE} \
-                      "${IMAGE}"
+                    while IFS='|' read -r service path kustomize
+                    do
+                        IMAGE="${AWS_ACCOUNT_ID}.dkr.ecr.${AWS_REGION}.amazonaws.com/${ECR_REPO}:${service}-${BUILD_NUMBER}"
+
+                        echo "======================================"
+                        echo "TRIVY IMAGE: ${service}"
+                        echo "======================================"
+
+                        trivy image \
+                          --severity HIGH,CRITICAL \
+                          --ignore-unfixed \
+                          --exit-code ${EXIT_CODE} \
+                          "${IMAGE}"
+
+                    done < .ci-services
                 '''
             }
         }
@@ -283,6 +271,8 @@ pipeline {
         stage('ECR Login') {
             steps {
                 sh '''
+                    ECR_REGISTRY="${AWS_ACCOUNT_ID}.dkr.ecr.${AWS_REGION}.amazonaws.com"
+
                     aws ecr get-login-password \
                       --region "${AWS_REGION}" \
                     | docker login \
@@ -293,23 +283,31 @@ pipeline {
             }
         }
 
-        stage('Push to ECR') {
+        stage('Push All to ECR') {
             steps {
                 sh '''
-                    echo "Pushing ${IMAGE}"
+                    ECR_REGISTRY="${AWS_ACCOUNT_ID}.dkr.ecr.${AWS_REGION}.amazonaws.com"
 
-                    docker push "${IMAGE}"
+                    while IFS='|' read -r service path kustomize
+                    do
+                        IMAGE="${ECR_REGISTRY}/${ECR_REPO}:${service}-${BUILD_NUMBER}"
+                        LATEST_IMAGE="${ECR_REGISTRY}/${ECR_REPO}:${service}-latest"
 
-                    docker tag \
-                      "${IMAGE}" \
-                      "${LATEST_IMAGE}"
+                        echo "======================================"
+                        echo "PUSHING ${service}"
+                        echo "======================================"
 
-                    docker push "${LATEST_IMAGE}"
+                        docker push "${IMAGE}"
 
-                    echo "======================================"
-                    echo "IMAGE PUSHED"
-                    echo "${IMAGE}"
-                    echo "======================================"
+                        docker tag \
+                          "${IMAGE}" \
+                          "${LATEST_IMAGE}"
+
+                        docker push "${LATEST_IMAGE}"
+
+                        echo "${IMAGE} pushed successfully"
+
+                    done < .ci-services
                 '''
             }
         }
@@ -324,19 +322,15 @@ pipeline {
                 ]) {
                     sh '''
                         echo "======================================"
-                        echo "UPDATING GITOPS"
+                        echo "CLONING GITOPS REPOSITORY"
                         echo "======================================"
 
                         rm -rf physics-platform-gitops
 
-                        set +x
-
                         git clone \
                           --branch "${GITOPS_BRANCH}" \
-                          "https://x-access-token:${GITHUB_TOKEN}@github.com/ahmedrabe33/physics-platform-gitops.git" \
+                          "${GITOPS_REPO}" \
                           physics-platform-gitops
-
-                        set -x
 
                         cd physics-platform-gitops
 
@@ -345,39 +339,56 @@ pipeline {
 
                         test -f "${GITOPS_FILE}"
 
-                        echo "Updating:"
-                        echo "${KUSTOMIZE_IMAGE}"
-                        echo
-                        echo "New repository:"
-                        echo "${ECR_REGISTRY}/${ECR_REPO}"
-                        echo
-                        echo "New tag:"
-                        echo "${IMAGE_TAG}"
-
-                        sed -i \
-                          "/- name: ${KUSTOMIZE_IMAGE}$/,/newTag:/ {
-                              s|^[[:space:]]*newName:.*|    newName: ${ECR_REGISTRY}/${ECR_REPO}|
-                              s|^[[:space:]]*newTag:.*|    newTag: ${IMAGE_TAG}|
-                          }" \
-                          "${GITOPS_FILE}"
-
                         echo "======================================"
-                        echo "UPDATED KUSTOMIZE ENTRY"
+                        echo "UPDATING ALL IMAGES"
                         echo "======================================"
 
-                        grep -A2 \
-                          -- "- name: ${KUSTOMIZE_IMAGE}" \
-                          "${GITOPS_FILE}"
+                        while IFS='|' read -r service path kustomize
+                        do
+                            NEW_TAG="${service}-${BUILD_NUMBER}"
 
-                        grep -A2 \
-                          -- "- name: ${KUSTOMIZE_IMAGE}" \
-                          "${GITOPS_FILE}" \
-                          | grep -q "newName: ${ECR_REGISTRY}/${ECR_REPO}"
+                            echo
+                            echo "Updating ${kustomize}"
+                            echo "Tag: ${NEW_TAG}"
 
-                        grep -A2 \
-                          -- "- name: ${KUSTOMIZE_IMAGE}" \
-                          "${GITOPS_FILE}" \
-                          | grep -q "newTag: ${IMAGE_TAG}"
+                            sed -i \
+                              "/- name: ${kustomize}$/,/newTag:/ {
+                                  s|^[[:space:]]*newName:.*|    newName: ${AWS_ACCOUNT_ID}.dkr.ecr.${AWS_REGION}.amazonaws.com/${ECR_REPO}|
+                                  s|^[[:space:]]*newTag:.*|    newTag: ${NEW_TAG}|
+                              }" \
+                              "${GITOPS_FILE}"
+
+                        done < "${WORKSPACE}/.ci-services"
+
+                        echo
+                        echo "======================================"
+                        echo "NEW GITOPS IMAGE CONFIGURATION"
+                        echo "======================================"
+
+                        grep -A2 -- "- name:" "${GITOPS_FILE}"
+
+                        echo
+                        echo "======================================"
+                        echo "VALIDATING ALL IMAGES"
+                        echo "======================================"
+
+                        while IFS='|' read -r service path kustomize
+                        do
+                            NEW_TAG="${service}-${BUILD_NUMBER}"
+
+                            grep -A2 \
+                              -- "- name: ${kustomize}" \
+                              "${GITOPS_FILE}" \
+                              | grep -q "newName: ${AWS_ACCOUNT_ID}.dkr.ecr.${AWS_REGION}.amazonaws.com/${ECR_REPO}"
+
+                            grep -A2 \
+                              -- "- name: ${kustomize}" \
+                              "${GITOPS_FILE}" \
+                              | grep -q "newTag: ${NEW_TAG}"
+
+                            echo "${kustomize} validated"
+
+                        done < "${WORKSPACE}/.ci-services"
 
                         git add "${GITOPS_FILE}"
 
@@ -386,19 +397,30 @@ pipeline {
                             exit 0
                         fi
 
+                        echo
+                        echo "======================================"
+                        echo "GITOPS DIFF"
+                        echo "======================================"
+
                         git diff --cached
 
                         git commit \
-                          -m "Deploy ${SERVICE} ${IMAGE_TAG}"
+                          -m "Deploy platform build ${BUILD_NUMBER}"
+
+                        echo
+                        echo "Pushing GitOps commit..."
 
                         set +x
 
-                        git push origin "${GITOPS_BRANCH}"
+                        git push \
+                          "https://x-access-token:${GITHUB_TOKEN}@github.com/ahmedrabe33/physics-platform-gitops.git" \
+                          "${GITOPS_BRANCH}"
 
                         set -x
 
+                        echo
                         echo "======================================"
-                        echo "GITOPS PUSH SUCCESSFUL"
+                        echo "ALL GITOPS IMAGES UPDATED"
                         echo "======================================"
                     '''
                 }
@@ -407,37 +429,45 @@ pipeline {
     }
 
     post {
+
         success {
             echo '======================================'
-            echo 'CI/CD PIPELINE SUCCESS'
+            echo 'PLATFORM CI/CD SUCCESS'
             echo '======================================'
-
-            echo "Service: ${env.SERVICE}"
-            echo "Image: ${env.IMAGE}"
-            echo "GitOps Image: ${env.KUSTOMIZE_IMAGE}"
+            echo "Build: ${env.BUILD_NUMBER}"
+            echo 'All six services were pushed to ECR.'
+            echo 'GitOps was updated with one commit.'
+            echo 'ArgoCD will deploy the new images to EKS.'
         }
 
         failure {
             echo '======================================'
-            echo 'CI/CD PIPELINE FAILED'
+            echo 'PLATFORM CI/CD FAILED'
             echo '======================================'
-
-            echo "Service: ${env.SERVICE ?: 'unknown'}"
+            echo "Build: ${env.BUILD_NUMBER}"
         }
 
         always {
             sh '''
-                echo "Cleaning workspace"
+                echo "Cleaning Docker images"
 
-                if [ -n "${IMAGE:-}" ]; then
-                    docker image rm "${IMAGE}" 2>/dev/null || true
-                fi
+                ECR_REGISTRY="${AWS_ACCOUNT_ID}.dkr.ecr.${AWS_REGION}.amazonaws.com"
 
-                if [ -n "${LATEST_IMAGE:-}" ]; then
-                    docker image rm "${LATEST_IMAGE}" 2>/dev/null || true
+                if [ -f .ci-services ]; then
+
+                    while IFS='|' read -r service path kustomize
+                    do
+                        IMAGE="${ECR_REGISTRY}/${ECR_REPO}:${service}-${BUILD_NUMBER}"
+                        LATEST_IMAGE="${ECR_REGISTRY}/${ECR_REPO}:${service}-latest"
+
+                        docker image rm "${IMAGE}" 2>/dev/null || true
+                        docker image rm "${LATEST_IMAGE}" 2>/dev/null || true
+
+                    done < .ci-services
                 fi
 
                 rm -rf physics-platform-gitops
+                rm -f .ci-services
             '''
         }
     }
