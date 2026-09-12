@@ -31,7 +31,6 @@ pipeline {
         AWS_REGION     = 'us-east-2'
         AWS_ACCOUNT_ID = '112859066474'
         ECR_REPO       = 'platform-app'
-
         SONAR_URL      = 'http://18.223.49.150:9000'
     }
 
@@ -46,22 +45,13 @@ pipeline {
         stage('Prepare') {
             steps {
                 script {
-
-                    /*
-                     * First webhook build can sometimes run
-                     * before Jenkins initializes parameters.
-                     */
                     env.SERVICE = params.SERVICE?.trim()
 
                     if (!env.SERVICE) {
                         env.SERVICE = 'auth-service'
                     }
 
-                    /*
-                     * Repository paths
-                     */
                     switch (env.SERVICE) {
-
                         case 'auth-service':
                             env.SERVICE_PATH = 'services/auth-service'
                             break
@@ -78,9 +68,6 @@ pipeline {
                             error("Unsupported service: ${env.SERVICE}")
                     }
 
-                    /*
-                     * ECR image information
-                     */
                     env.IMAGE_TAG =
                         "${env.SERVICE}-${env.BUILD_NUMBER}"
 
@@ -98,22 +85,18 @@ pipeline {
                     echo "======================================"
                     echo "BUILD INFORMATION"
                     echo "======================================"
-
                     echo "Agent:        $(hostname)"
                     echo "Service:      ${SERVICE}"
                     echo "Service Path: ${SERVICE_PATH}"
                     echo "Build:        ${BUILD_NUMBER}"
                     echo "Image Tag:    ${IMAGE_TAG}"
                     echo "Image:        ${IMAGE}"
+                    echo "======================================"
 
-                    echo "======================================"
-                    echo "VALIDATING SERVICE"
-                    echo "======================================"
+                    echo "Validating service files..."
 
                     test -d "${SERVICE_PATH}"
-
                     test -f "${SERVICE_PATH}/package.json"
-
                     test -f "${SERVICE_PATH}/Dockerfile"
 
                     echo "Service validation successful"
@@ -171,11 +154,9 @@ pipeline {
                         variable: 'SONAR_TOKEN'
                     )
                 ]) {
-
                     dir("${env.SERVICE_PATH}") {
-
                         sh '''
-                            echo "Running SonarQube analysis"
+                            echo "Running SonarQube analysis for ${SERVICE}"
 
                             sonar-scanner \
                               -Dsonar.projectKey=physics-platform-${SERVICE} \
@@ -195,7 +176,6 @@ pipeline {
         stage('Trivy Filesystem Scan') {
             steps {
                 dir("${env.SERVICE_PATH}") {
-
                     sh '''
                         echo "Running Trivy filesystem scan"
 
@@ -219,12 +199,10 @@ pipeline {
         stage('Docker Build') {
             steps {
                 dir("${env.SERVICE_PATH}") {
-
                     sh '''
                         echo "======================================"
                         echo "BUILDING DOCKER IMAGE"
                         echo "======================================"
-
                         echo "${IMAGE}"
 
                         docker build \
@@ -237,7 +215,6 @@ pipeline {
 
         stage('Trivy Image Scan') {
             steps {
-
                 sh '''
                     echo "Running Trivy image scan"
 
@@ -258,7 +235,6 @@ pipeline {
 
         stage('AWS Identity') {
             steps {
-
                 sh '''
                     echo "======================================"
                     echo "AWS IDENTITY"
@@ -271,9 +247,8 @@ pipeline {
 
         stage('ECR Login') {
             steps {
-
                 sh '''
-                    echo "Logging into ECR"
+                    echo "Logging into Amazon ECR"
 
                     aws ecr get-login-password \
                       --region "${AWS_REGION}" \
@@ -287,7 +262,6 @@ pipeline {
 
         stage('Push to ECR') {
             steps {
-
                 sh '''
                     echo "======================================"
                     echo "PUSHING IMAGE TO ECR"
@@ -305,10 +279,8 @@ pipeline {
                     echo "======================================"
                     echo "IMAGE PUSHED SUCCESSFULLY"
                     echo "======================================"
-
                     echo "Version:"
                     echo "${IMAGE}"
-
                     echo
                     echo "Latest:"
                     echo "${LATEST_IMAGE}"
@@ -318,12 +290,10 @@ pipeline {
     }
 
     post {
-
         success {
             echo '======================================'
             echo 'CI PIPELINE SUCCESS'
             echo '======================================'
-
             echo "Service: ${env.SERVICE}"
             echo "Image: ${env.IMAGE}"
         }
@@ -332,29 +302,21 @@ pipeline {
             echo '======================================'
             echo 'CI PIPELINE FAILED'
             echo '======================================'
-
             echo "Service: ${env.SERVICE ?: 'unknown'}"
         }
 
         always {
-
             sh '''
                 echo "Cleaning local Docker images"
 
                 if [ -n "${IMAGE:-}" ]; then
-                    docker image rm \
-                      "${IMAGE}" \
-                      2>/dev/null || true
+                    docker image rm "${IMAGE}" 2>/dev/null || true
                 fi
 
                 if [ -n "${LATEST_IMAGE:-}" ]; then
-                    docker image rm \
-                      "${LATEST_IMAGE}" \
-                      2>/dev/null || true
+                    docker image rm "${LATEST_IMAGE}" 2>/dev/null || true
                 fi
             '''
         }
     }
 }
-
-بعدها:
