@@ -15,9 +15,12 @@ pipeline {
             choices: [
                 'auth-service',
                 'student-service',
-                'gateway'
+                'content-service',
+                'progress-service',
+                'gateway',
+                'frontend'
             ],
-            description: 'Microservice to build'
+            description: 'Service to build and deploy'
         )
 
         booleanParam(
@@ -34,7 +37,6 @@ pipeline {
 
         SONAR_URL      = 'http://18.223.49.150:9000'
 
-        GITOPS_REPO    = 'https://github.com/ahmedrabe33/physics-platform-gitops.git'
         GITOPS_BRANCH  = 'main'
         GITOPS_FILE    = 'k8s/overlays/eks/kustomization.yaml'
     }
@@ -68,9 +70,24 @@ pipeline {
                             env.KUSTOMIZE_IMAGE = 'physics-student'
                             break
 
+                        case 'content-service':
+                            env.SERVICE_PATH = 'services/content-service'
+                            env.KUSTOMIZE_IMAGE = 'physics-content'
+                            break
+
+                        case 'progress-service':
+                            env.SERVICE_PATH = 'services/progress-service'
+                            env.KUSTOMIZE_IMAGE = 'physics-progress'
+                            break
+
                         case 'gateway':
                             env.SERVICE_PATH = 'gateway'
                             env.KUSTOMIZE_IMAGE = 'physics-gateway'
+                            break
+
+                        case 'frontend':
+                            env.SERVICE_PATH = 'frontend'
+                            env.KUSTOMIZE_IMAGE = 'physics-frontend'
                             break
 
                         default:
@@ -108,7 +125,6 @@ pipeline {
                     echo "======================================"
 
                     test -d "${SERVICE_PATH}"
-                    test -f "${SERVICE_PATH}/package.json"
                     test -f "${SERVICE_PATH}/Dockerfile"
 
                     echo "Service validation successful"
@@ -120,12 +136,19 @@ pipeline {
             steps {
                 dir("${env.SERVICE_PATH}") {
                     sh '''
-                        echo "Installing dependencies for ${SERVICE}"
+                        if [ -f package.json ]; then
 
-                        if [ -f package-lock.json ]; then
-                            npm ci
+                            echo "Installing dependencies for ${SERVICE}"
+
+                            if [ -f package-lock.json ]; then
+                                npm ci
+                            else
+                                npm install
+                            fi
+
                         else
-                            npm install
+                            echo "No package.json found"
+                            echo "Skipping npm dependencies"
                         fi
                     '''
                 }
@@ -136,9 +159,13 @@ pipeline {
             steps {
                 dir("${env.SERVICE_PATH}") {
                     sh '''
-                        echo "Running tests for ${SERVICE}"
-
-                        npm test --if-present
+                        if [ -f package.json ]; then
+                            echo "Running tests for ${SERVICE}"
+                            npm test --if-present
+                        else
+                            echo "No package.json found"
+                            echo "Skipping unit tests"
+                        fi
                     '''
                 }
             }
@@ -179,7 +206,7 @@ pipeline {
                               -Dsonar.projectKey=physics-platform-${SERVICE} \
                               -Dsonar.projectName=physics-platform-${SERVICE} \
                               -Dsonar.sources=. \
-                              -Dsonar.exclusions=node_modules/**,coverage/**,dist/** \
+                              -Dsonar.exclusions=node_modules/**,coverage/**,dist/**,build/** \
                               -Dsonar.host.url=${SONAR_URL} \
                               -Dsonar.token=${SONAR_TOKEN} \
                               -Dsonar.qualitygate.wait=true \
@@ -194,8 +221,6 @@ pipeline {
             steps {
                 dir("${env.SERVICE_PATH}") {
                     sh '''
-                        echo "Running Trivy filesystem scan"
-
                         EXIT_CODE=0
 
                         if [ "${FAIL_ON_SECURITY_ISSUES}" = "true" ]; then
@@ -221,8 +246,6 @@ pipeline {
                         echo "BUILDING DOCKER IMAGE"
                         echo "======================================"
 
-                        echo "${IMAGE}"
-
                         docker build \
                           -t "${IMAGE}" \
                           .
@@ -234,8 +257,6 @@ pipeline {
         stage('Trivy Image Scan') {
             steps {
                 sh '''
-                    echo "Running Trivy image scan"
-
                     EXIT_CODE=0
 
                     if [ "${FAIL_ON_SECURITY_ISSUES}" = "true" ]; then
@@ -254,10 +275,6 @@ pipeline {
         stage('AWS Identity') {
             steps {
                 sh '''
-                    echo "======================================"
-                    echo "AWS IDENTITY"
-                    echo "======================================"
-
                     aws sts get-caller-identity
                 '''
             }
@@ -266,8 +283,6 @@ pipeline {
         stage('ECR Login') {
             steps {
                 sh '''
-                    echo "Logging into Amazon ECR"
-
                     aws ecr get-login-password \
                       --region "${AWS_REGION}" \
                     | docker login \
@@ -281,9 +296,7 @@ pipeline {
         stage('Push to ECR') {
             steps {
                 sh '''
-                    echo "======================================"
-                    echo "PUSHING IMAGE TO ECR"
-                    echo "======================================"
+                    echo "Pushing ${IMAGE}"
 
                     docker push "${IMAGE}"
 
@@ -293,17 +306,10 @@ pipeline {
 
                     docker push "${LATEST_IMAGE}"
 
-                    echo
                     echo "======================================"
-                    echo "IMAGE PUSHED SUCCESSFULLY"
-                    echo "======================================"
-
-                    echo "Version:"
+                    echo "IMAGE PUSHED"
                     echo "${IMAGE}"
-
-                    echo
-                    echo "Latest:"
-                    echo "${LATEST_IMAGE}"
+                    echo "======================================"
                 '''
             }
         }
@@ -318,7 +324,7 @@ pipeline {
                 ]) {
                     sh '''
                         echo "======================================"
-                        echo "UPDATING GITOPS REPOSITORY"
+                        echo "UPDATING GITOPS"
                         echo "======================================"
 
                         rm -rf physics-platform-gitops
@@ -337,12 +343,16 @@ pipeline {
                         git config user.name "Jenkins"
                         git config user.email "jenkins@physics-platform.local"
 
-                        echo "Service:         ${SERVICE}"
-                        echo "Kustomize Image: ${KUSTOMIZE_IMAGE}"
-                        echo "New Name:        ${ECR_REGISTRY}/${ECR_REPO}"
-                        echo "New Tag:         ${IMAGE_TAG}"
-
                         test -f "${GITOPS_FILE}"
+
+                        echo "Updating:"
+                        echo "${KUSTOMIZE_IMAGE}"
+                        echo
+                        echo "New repository:"
+                        echo "${ECR_REGISTRY}/${ECR_REPO}"
+                        echo
+                        echo "New tag:"
+                        echo "${IMAGE_TAG}"
 
                         sed -i \
                           "/- name: ${KUSTOMIZE_IMAGE}$/,/newTag:/ {
@@ -351,19 +361,13 @@ pipeline {
                           }" \
                           "${GITOPS_FILE}"
 
-                        echo
                         echo "======================================"
-                        echo "UPDATED KUSTOMIZE IMAGE"
+                        echo "UPDATED KUSTOMIZE ENTRY"
                         echo "======================================"
 
                         grep -A2 \
                           -- "- name: ${KUSTOMIZE_IMAGE}" \
                           "${GITOPS_FILE}"
-
-                        echo
-                        echo "======================================"
-                        echo "VALIDATING UPDATE"
-                        echo "======================================"
 
                         grep -A2 \
                           -- "- name: ${KUSTOMIZE_IMAGE}" \
@@ -382,18 +386,10 @@ pipeline {
                             exit 0
                         fi
 
-                        echo
-                        echo "======================================"
-                        echo "GITOPS DIFF"
-                        echo "======================================"
-
                         git diff --cached
 
                         git commit \
                           -m "Deploy ${SERVICE} ${IMAGE_TAG}"
-
-                        echo
-                        echo "Pushing GitOps commit..."
 
                         set +x
 
@@ -401,9 +397,8 @@ pipeline {
 
                         set -x
 
-                        echo
                         echo "======================================"
-                        echo "GITOPS UPDATE PUSHED SUCCESSFULLY"
+                        echo "GITOPS PUSH SUCCESSFUL"
                         echo "======================================"
                     '''
                 }
@@ -412,7 +407,6 @@ pipeline {
     }
 
     post {
-
         success {
             echo '======================================'
             echo 'CI/CD PIPELINE SUCCESS'
@@ -420,8 +414,7 @@ pipeline {
 
             echo "Service: ${env.SERVICE}"
             echo "Image: ${env.IMAGE}"
-            echo "GitOps image: ${env.KUSTOMIZE_IMAGE}"
-            echo 'ArgoCD will detect the GitOps commit and sync EKS.'
+            echo "GitOps Image: ${env.KUSTOMIZE_IMAGE}"
         }
 
         failure {
@@ -434,18 +427,14 @@ pipeline {
 
         always {
             sh '''
-                echo "Cleaning workspace resources"
+                echo "Cleaning workspace"
 
                 if [ -n "${IMAGE:-}" ]; then
-                    docker image rm \
-                      "${IMAGE}" \
-                      2>/dev/null || true
+                    docker image rm "${IMAGE}" 2>/dev/null || true
                 fi
 
                 if [ -n "${LATEST_IMAGE:-}" ]; then
-                    docker image rm \
-                      "${LATEST_IMAGE}" \
-                      2>/dev/null || true
+                    docker image rm "${LATEST_IMAGE}" 2>/dev/null || true
                 fi
 
                 rm -rf physics-platform-gitops
