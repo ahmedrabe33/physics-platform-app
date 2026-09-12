@@ -46,7 +46,43 @@ pipeline {
         stage('Prepare') {
             steps {
                 script {
-                    env.IMAGE_TAG = "${params.SERVICE}-${env.BUILD_NUMBER}"
+
+                    /*
+                     * First webhook build can sometimes run
+                     * before Jenkins initializes parameters.
+                     */
+                    env.SERVICE = params.SERVICE?.trim()
+
+                    if (!env.SERVICE) {
+                        env.SERVICE = 'auth-service'
+                    }
+
+                    /*
+                     * Repository paths
+                     */
+                    switch (env.SERVICE) {
+
+                        case 'auth-service':
+                            env.SERVICE_PATH = 'services/auth-service'
+                            break
+
+                        case 'student-service':
+                            env.SERVICE_PATH = 'services/student-service'
+                            break
+
+                        case 'gateway':
+                            env.SERVICE_PATH = 'gateway'
+                            break
+
+                        default:
+                            error("Unsupported service: ${env.SERVICE}")
+                    }
+
+                    /*
+                     * ECR image information
+                     */
+                    env.IMAGE_TAG =
+                        "${env.SERVICE}-${env.BUILD_NUMBER}"
 
                     env.ECR_REGISTRY =
                         "${env.AWS_ACCOUNT_ID}.dkr.ecr.${env.AWS_REGION}.amazonaws.com"
@@ -55,30 +91,42 @@ pipeline {
                         "${env.ECR_REGISTRY}/${env.ECR_REPO}:${env.IMAGE_TAG}"
 
                     env.LATEST_IMAGE =
-                        "${env.ECR_REGISTRY}/${env.ECR_REPO}:${params.SERVICE}-latest"
+                        "${env.ECR_REGISTRY}/${env.ECR_REPO}:${env.SERVICE}-latest"
                 }
 
                 sh '''
                     echo "======================================"
                     echo "BUILD INFORMATION"
                     echo "======================================"
-                    echo "Agent:   $(hostname)"
-                    echo "Service: ${SERVICE}"
-                    echo "Build:   ${BUILD_NUMBER}"
-                    echo "Image:   ${IMAGE}"
+
+                    echo "Agent:        $(hostname)"
+                    echo "Service:      ${SERVICE}"
+                    echo "Service Path: ${SERVICE_PATH}"
+                    echo "Build:        ${BUILD_NUMBER}"
+                    echo "Image Tag:    ${IMAGE_TAG}"
+                    echo "Image:        ${IMAGE}"
+
+                    echo "======================================"
+                    echo "VALIDATING SERVICE"
                     echo "======================================"
 
-                    test -d "${SERVICE}"
-                    test -f "${SERVICE}/package.json"
-                    test -f "${SERVICE}/Dockerfile"
+                    test -d "${SERVICE_PATH}"
+
+                    test -f "${SERVICE_PATH}/package.json"
+
+                    test -f "${SERVICE_PATH}/Dockerfile"
+
+                    echo "Service validation successful"
                 '''
             }
         }
 
         stage('Install Dependencies') {
             steps {
-                dir("${params.SERVICE}") {
+                dir("${env.SERVICE_PATH}") {
                     sh '''
+                        echo "Installing dependencies for ${SERVICE}"
+
                         if [ -f package-lock.json ]; then
                             npm ci
                         else
@@ -91,8 +139,10 @@ pipeline {
 
         stage('Unit Tests') {
             steps {
-                dir("${params.SERVICE}") {
+                dir("${env.SERVICE_PATH}") {
                     sh '''
+                        echo "Running tests for ${SERVICE}"
+
                         npm test --if-present
                     '''
                 }
@@ -108,6 +158,7 @@ pipeline {
                       "${SONAR_URL}/api/system/status"
 
                     echo
+                    echo "SonarQube is reachable"
                 '''
             }
         }
@@ -120,8 +171,12 @@ pipeline {
                         variable: 'SONAR_TOKEN'
                     )
                 ]) {
-                    dir("${params.SERVICE}") {
+
+                    dir("${env.SERVICE_PATH}") {
+
                         sh '''
+                            echo "Running SonarQube analysis"
+
                             sonar-scanner \
                               -Dsonar.projectKey=physics-platform-${SERVICE} \
                               -Dsonar.projectName=physics-platform-${SERVICE} \
@@ -139,8 +194,11 @@ pipeline {
 
         stage('Trivy Filesystem Scan') {
             steps {
-                dir("${params.SERVICE}") {
+                dir("${env.SERVICE_PATH}") {
+
                     sh '''
+                        echo "Running Trivy filesystem scan"
+
                         EXIT_CODE=0
 
                         if [ "${FAIL_ON_SECURITY_ISSUES}" = "true" ]; then
@@ -160,8 +218,15 @@ pipeline {
 
         stage('Docker Build') {
             steps {
-                dir("${params.SERVICE}") {
+                dir("${env.SERVICE_PATH}") {
+
                     sh '''
+                        echo "======================================"
+                        echo "BUILDING DOCKER IMAGE"
+                        echo "======================================"
+
+                        echo "${IMAGE}"
+
                         docker build \
                           -t "${IMAGE}" \
                           .
@@ -172,7 +237,10 @@ pipeline {
 
         stage('Trivy Image Scan') {
             steps {
+
                 sh '''
+                    echo "Running Trivy image scan"
+
                     EXIT_CODE=0
 
                     if [ "${FAIL_ON_SECURITY_ISSUES}" = "true" ]; then
@@ -190,7 +258,12 @@ pipeline {
 
         stage('AWS Identity') {
             steps {
+
                 sh '''
+                    echo "======================================"
+                    echo "AWS IDENTITY"
+                    echo "======================================"
+
                     aws sts get-caller-identity
                 '''
             }
@@ -198,7 +271,10 @@ pipeline {
 
         stage('ECR Login') {
             steps {
+
                 sh '''
+                    echo "Logging into ECR"
+
                     aws ecr get-login-password \
                       --region "${AWS_REGION}" \
                     | docker login \
@@ -211,7 +287,12 @@ pipeline {
 
         stage('Push to ECR') {
             steps {
+
                 sh '''
+                    echo "======================================"
+                    echo "PUSHING IMAGE TO ECR"
+                    echo "======================================"
+
                     docker push "${IMAGE}"
 
                     docker tag \
@@ -220,35 +301,60 @@ pipeline {
 
                     docker push "${LATEST_IMAGE}"
 
+                    echo
                     echo "======================================"
-                    echo "IMAGE PUSHED"
+                    echo "IMAGE PUSHED SUCCESSFULLY"
+                    echo "======================================"
+
+                    echo "Version:"
                     echo "${IMAGE}"
-                    echo "======================================"
+
+                    echo
+                    echo "Latest:"
+                    echo "${LATEST_IMAGE}"
                 '''
             }
         }
     }
 
     post {
+
         success {
+            echo '======================================'
             echo 'CI PIPELINE SUCCESS'
+            echo '======================================'
+
+            echo "Service: ${env.SERVICE}"
             echo "Image: ${env.IMAGE}"
         }
 
         failure {
+            echo '======================================'
             echo 'CI PIPELINE FAILED'
+            echo '======================================'
+
+            echo "Service: ${env.SERVICE ?: 'unknown'}"
         }
 
         always {
+
             sh '''
+                echo "Cleaning local Docker images"
+
                 if [ -n "${IMAGE:-}" ]; then
-                    docker image rm "${IMAGE}" 2>/dev/null || true
+                    docker image rm \
+                      "${IMAGE}" \
+                      2>/dev/null || true
                 fi
 
                 if [ -n "${LATEST_IMAGE:-}" ]; then
-                    docker image rm "${LATEST_IMAGE}" 2>/dev/null || true
+                    docker image rm \
+                      "${LATEST_IMAGE}" \
+                      2>/dev/null || true
                 fi
             '''
         }
     }
 }
+
+بعدها:
