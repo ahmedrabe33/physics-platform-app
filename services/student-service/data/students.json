@@ -1,0 +1,67 @@
+[
+  {
+    "id": 1785170476073,
+    "userId": "1785170475428",
+    "username": "ahmed",
+    "email": "ahmed@gmail.com",
+    "grade": "third",
+    "paymentNumber": "01501600960",
+    "paymentProof": "/uploads/payment-proofs/1785170475987-288462642.png",
+    "status": "approved",
+    "registeredAt": "2026-07-27T16:41:16.073Z",
+    "subscriptionStart": "2026-07-27T16:43:38.731Z",
+    "subscriptionExpiry": "2026-08-27T16:43:38.731Z"
+  },
+  {
+    "id": 1785175752931,
+    "userId": "1785175752468",
+    "username": "nesma",
+    "email": "nesma@gmail.com",
+    "grade": "second",
+    "paymentNumber": "01501600960",
+    "paymentProof": "/uploads/payment-proofs/1785175752864-363305718.png",
+    "status": "approved",
+    "registeredAt": "2026-07-27T18:09:12.931Z",
+    "subscriptionStart": "2026-07-27T18:09:50.205Z",
+    "subscriptionExpiry": "2026-08-27T18:09:50.205Z"
+  },
+  {
+    "id": 1785182916085,
+    "userId": "1785182916027",
+    "username": "mohamed",
+    "email": "mohamed@gmail.com",
+    "grade": "second",
+    "paymentNumber": "01501600960",
+    "paymentProof": "/uploads/payment-proofs/1785182916078-575645485.png",
+    "status": "rejected",
+    "registeredAt": "2026-07-27T20:08:36.085Z",
+    "subscriptionStart": null,
+    "subscriptionExpiry": null
+  },
+  {
+    "id": 1785183164933,
+    "userId": "1785183164903",
+    "username": "a",
+    "email": "a@gmail.com",
+    "grade": "second",
+    "paymentNumber": "01501600960",
+    "paymentProof": "/uploads/payment-proofs/1785183164932-823794376.png",
+    "status": "approved",
+    "registeredAt": "2026-07-27T20:12:44.933Z",
+    "subscriptionStart": "2026-07-27T20:13:01.549Z",
+    "subscriptionExpiry": "2026-08-27T20:13:01.549Z"
+  },
+  {
+    "id": 1785183425330,
+    "userId": "1785183425309",
+    "username": "fox",
+    "email": "fox@fox",
+    "grade": "third",
+    "paymentNumber": "01501600960",
+    "paymentProof": "/uploads/payment-proofs/1785183425329-696550125.png",
+    "status": "approved",
+    "registeredAt": "2026-07-27T20:17:05.330Z",
+    "subscriptionStart": "2026-07-27T20:17:20.684Z",
+    "subscriptionExpiry": "2026-08-27T20:17:20.684Z"
+  }
+]

@@ -1,0 +1,30 @@
+{
+  "second": {
+    "chapters": []
+  },
+  "third": {
+    "chapters": [
+      {
+        "id": 1785170253360,
+        "title": "الفصل الاول (الكهربية)",
+        "order": 1,
+        "lessons": [
+          {
+            "id": 1785170376763,
+            "title": "الدرس الاول المقاومة الكهربية",
+            "description": "",
+            "videoUrl": "https://drive.google.com/file/d/1e_f6LWJg3aNBZ4RDTRFfsURszO4FNQ1O/view?usp=drive_link",
+            "order": 1,
+            "exercises": []
+          }
+        ]
+      },
+      {
+        "id": 1785174643717,
+        "title": "اساسيات",
+        "order": 2,
+        "lessons": []
+      }
+    ]
+  }
+}
